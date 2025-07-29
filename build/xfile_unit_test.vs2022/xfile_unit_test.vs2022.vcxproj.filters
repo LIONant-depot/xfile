@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="..\..\source\xfile.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\source\xfile.h" />
+    <ClInclude Include="..\..\source\unit_tests\xfile_unit_test.h">
+      <Filter>Unit-Test</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\source\implementation\windows\xfile_device_window_files.h">
+      <Filter>Implementation\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\source\implementation\general\xfile_device_general_ram.h">
+      <Filter>Implementation\Generic</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\source\implementation\xfile_inline.h">
+      <Filter>Implementation</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Unit-Test">
+      <UniqueIdentifier>{4e085bad-d2e9-4afb-ba31-65dbf41da0d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Implementation">
+      <UniqueIdentifier>{72fab27a-224c-4185-b481-897a27b812a9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Implementation\Windows">
+      <UniqueIdentifier>{cc50f037-8429-440e-86a0-b6cee516f359}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Implementation\Generic">
+      <UniqueIdentifier>{6c9f882a-d8cf-4441-9e14-4d55ddf10cb5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\README.md" />
+  </ItemGroup>
+</Project>
