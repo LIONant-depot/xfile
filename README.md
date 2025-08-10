@@ -15,6 +15,10 @@ and more. Built for speed and flexibility, xfile empowers developers to handle d
 - **No Dependencies**: No extra libraries needed
 - **Eeasy to integrate**: Simply add to your project ```xfile.cpp``` and ```xfile.h``` and you are done.
 
+## Dependencies
+
+- [xerr](https://github.com/LIONant-depot/xerr.git) - For error handling...
+
 ## Code Example
 ```cpp
 #include "xfile.h"

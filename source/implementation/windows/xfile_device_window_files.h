@@ -49,7 +49,7 @@ namespace xfile::driver::windows
 
             //----------------------------------------------------------------------------------------
 
-            err open(std::wstring_view FileName, access_types AccessTypes) noexcept override
+            xerr open(std::wstring_view FileName, access_types AccessTypes) noexcept override
             {
                 std::uint32_t FileMode      = 0;
                 std::uint32_t Disposition   = 0;
@@ -92,11 +92,11 @@ namespace xfile::driver::windows
                     CollectErrorAsString();
                     switch (errorCode)
                     {
-                    case ERROR_FILE_NOT_FOUND: return err::create<err::state::OPENING_FILE, "The system cannot find the file specified.">();
-                    case ERROR_ACCESS_DENIED:  return err::create<err::state::OPENING_FILE, "Access is denied.">();
-                    case ERROR_INVALID_HANDLE: return err::create<err::state::OPENING_FILE, "The handle is invalid.">();
-                    case ERROR_PATH_NOT_FOUND: return err::create<err::state::OPENING_FILE, "The system cannot find the path specified.">();
-                    default:                   return err::create<err::state::OPENING_FILE, "Unknown error.">();
+                    case ERROR_FILE_NOT_FOUND: return xerr::create<state::OPENING_FILE, "The system cannot find the file specified.">();
+                    case ERROR_ACCESS_DENIED:  return xerr::create<state::OPENING_FILE, "Access is denied.">();
+                    case ERROR_INVALID_HANDLE: return xerr::create<state::OPENING_FILE, "The handle is invalid.">();
+                    case ERROR_PATH_NOT_FOUND: return xerr::create<state::OPENING_FILE, "The system cannot find the path specified.">();
+                    default:                   return xerr::create<state::OPENING_FILE, "Unknown error.">();
                     }
                 }
 
@@ -137,7 +137,7 @@ namespace xfile::driver::windows
 
             //----------------------------------------------------------------------------------------
 
-            err Read(std::span<std::byte> View) noexcept override
+            xerr Read(std::span<std::byte> View) noexcept override
             {
                 assert(View.size() < std::numeric_limits<DWORD>::max() );
 
@@ -169,19 +169,19 @@ namespace xfile::driver::windows
                         CollectErrorAsString();
 
                         // code to handle that 
-                        return err::create<err::state::UNEXPECTED_EOF, "Unexpected End Of File while reading">();
+                        return xerr::create<state::UNEXPECTED_EOF, "Unexpected End Of File while reading">();
                     }
 
                     case ERROR_IO_PENDING:
                     {
                         m_bIOPending = true;
-                        return err::create<err::state::INCOMPLETE, "Still reading" >();
+                        return xerr::create<state::INCOMPLETE, "Still reading" >();
                     }
 
                     default:
                     {
                         CollectErrorAsString();
-                        return err::create_f<"Error while reading">();
+                        return xerr::create_f<state,"Error while reading">();
                     }
                     }
                 }
@@ -192,9 +192,9 @@ namespace xfile::driver::windows
 
             //----------------------------------------------------------------------------------------
 
-            err Write(const std::span<const std::byte> View) noexcept override
+            xerr Write(const std::span<const std::byte> View) noexcept override
             {
-                err  Error;
+                xerr  Error;
                 assert(View.size() < std::numeric_limits<DWORD>::max());
 
                 const DWORD Count = static_cast<DWORD>(View.size());
@@ -225,19 +225,19 @@ namespace xfile::driver::windows
 
                             // code to handle that 
                             CollectErrorAsString();
-                            return err::create<err::state::UNEXPECTED_EOF, "Unexpected end of file while writing">();
+                            return xerr::create<state::UNEXPECTED_EOF, "Unexpected end of file while writing">();
                         }
 
                         case ERROR_IO_PENDING:
                         {
                             m_bIOPending = true;
-                            return err::create<err::state::INCOMPLETE, "Still writing" >();
+                            return xerr::create<state::INCOMPLETE, "Still writing" >();
                         }
 
                         default:
                         {
                             CollectErrorAsString();
-                            return err::create_f<"Error while writing">();
+                            return xerr::create_f<state,"Error while writing">();
                         }
                     }
                 }
@@ -247,7 +247,7 @@ namespace xfile::driver::windows
 
             //----------------------------------------------------------------------------------------
 
-            err Seek(seek_mode Mode, std::size_t Pos) noexcept override
+            xerr Seek(seek_mode Mode, std::size_t Pos) noexcept override
             {
                 auto HardwareMode = [](seek_mode Mode)
                     {
@@ -280,10 +280,10 @@ namespace xfile::driver::windows
                     if (Result == INVALID_SET_FILE_POINTER) //-V547
                     {
                         // Failed to seek.
-                        return err::create_f<"Fail to seek, INVALID_SET_FILE_POINTER">();
+                        return xerr::create_f<state,"Fail to seek, INVALID_SET_FILE_POINTER">();
                     }
 
-                    return err::create_f<"Fail to seek">();
+                    return xerr::create_f<state,"Fail to seek">();
                 }
 
                 // Set the position for async files
@@ -295,7 +295,7 @@ namespace xfile::driver::windows
 
             //----------------------------------------------------------------------------------------
 
-            err Tell(std::size_t& Pos) noexcept override
+            xerr Tell(std::size_t& Pos) noexcept override
             {
                 LARGE_INTEGER   Position;
                 LARGE_INTEGER   NewFilePointer;
@@ -306,7 +306,7 @@ namespace xfile::driver::windows
                 if (FALSE == SetFilePointerEx(m_Handle, Position, &NewFilePointer, FILE_CURRENT))
                 {
                     CollectErrorAsString();
-                    return err::create_f<"Error while Telling">();
+                    return xerr::create_f<state,"Error while Telling">();
                 }
 
                 Pos = NewFilePointer.QuadPart;
@@ -325,7 +325,7 @@ namespace xfile::driver::windows
 
             //----------------------------------------------------------------------------------------
 
-            err Length(std::size_t& Length) noexcept override
+            xerr Length(std::size_t& Length) noexcept override
             {
                 std::size_t Cursor;
 
@@ -372,7 +372,7 @@ namespace xfile::driver::windows
                     {
                         if (auto Err = Synchronize(true); Err)
                         {
-                            if (Err.getState() == err::state::INCOMPLETE) return false;
+                            if (Err.getState<state>() == state::INCOMPLETE) return false;
                             Err.clear();
                         }
 
@@ -392,7 +392,7 @@ namespace xfile::driver::windows
 
             //----------------------------------------------------------------------------------------
 
-            err Synchronize(bool bBlock) noexcept override
+            xerr Synchronize(bool bBlock) noexcept override
             {
                 if (m_bIOPending)
                 {
@@ -427,24 +427,24 @@ namespace xfile::driver::windows
                     // we have reached the end of
                     // the file during asynchronous
                     // operation
-                    return err::create< err::state::UNEXPECTED_EOF, "Unexpected end of file">();
+                    return xerr::create< state::UNEXPECTED_EOF, "Unexpected end of file">();
                 }
 
                 if (dwError == ERROR_IO_INCOMPLETE)
                 {
                     m_bIOPending = true;
-                    return err::create<err::state::INCOMPLETE, "Incomplete">();
+                    return xerr::create<state::INCOMPLETE, "Incomplete">();
                 }
 
                 if (dwError == ERROR_OPERATION_ABORTED)
                 {
                     CollectErrorAsString();
-                    return err::create_f<"Operation Aborted">();
+                    return xerr::create_f<state,"Operation Aborted">();
                 }
 
                 // The result is FALSE and the error isn't ERROR_IO_INCOMPLETE, there's a real error!
                 CollectErrorAsString();
-                return err::create_f<"Unknown Error">();
+                return xerr::create_f<state,"Unknown Error">();
             }
 
             //----------------------------------------------------------------------------------------

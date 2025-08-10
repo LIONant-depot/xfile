@@ -7,6 +7,8 @@
 #include <string>
 #include <memory>
 
+#include "source/xerr.h"
+
 namespace xfile
 {
     //-----------------------------------------------------------------------------------------------------
@@ -24,44 +26,14 @@ namespace xfile
     //-----------------------------------------------------------------------------------------------------
     // Error handling
     //-----------------------------------------------------------------------------------------------------
-    struct err
-    {
-        enum class state : std::uint8_t
-        { OK                = 0                             // Default OK required by the system
-        , FAILURE           = 1                             // Default FAILURE required by the system
-        , DEVICE_FAILURE
-        , CREATING_FILE
-        , OPENING_FILE
-        , UNEXPECTED_EOF
-        , INCOMPLETE
-        };
-
-        constexpr           err             ( void )                    noexcept = default;
-        consteval           err             ( const char* p )           noexcept : m_pMessage(p){}
-        constexpr           operator bool   ( void )            const   noexcept { return !!m_pMessage;}
-        constexpr   state   getState        ( void )            const   noexcept { return m_pMessage ? static_cast<state>(m_pMessage[-1]) : state::OK; }
-        inline      void    clear           ( void )                    noexcept { m_pMessage =  nullptr; }
-
-        template<std::size_t N>
-        struct string_literal
-        {
-            std::array<char, N> m_Value;
-            consteval string_literal(const char(&str)[N]) noexcept { for (std::size_t i = 0; i < N; ++i) m_Value[i] = str[i];}
-        };
-
-        template <string_literal T_STR_V, state T_STATE_V>
-        inline constexpr static auto data_v = []() consteval noexcept
-        {
-            std::array< char, T_STR_V.m_Value.size() + 1> temp = {};
-            temp[0] = static_cast<char>(T_STATE_V);
-            for (std::size_t i = 1; i < T_STR_V.m_Value.size(); ++i) temp[i] = T_STR_V.m_Value[i-1];
-            return temp;
-        }();
-
-        template <state T_STATE_V, string_literal T_STR_V> consteval static err create()   noexcept { return { data_v<T_STR_V, T_STATE_V     >.data() + 1 }; }
-        template <string_literal T_STR_V>                  consteval static err create_f() noexcept { return { data_v<T_STR_V, state::FAILURE>.data() + 1 }; }
-
-        const char* m_pMessage = nullptr;
+    enum class state : std::uint8_t
+    { OK                = 0                             // Default OK required by the system
+    , FAILURE           = 1                             // Default FAILURE required by the system
+    , DEVICE_FAILURE
+    , CREATING_FILE
+    , OPENING_FILE
+    , UNEXPECTED_EOF
+    , INCOMPLETE
     };
 
     //------------------------------------------------------------------------------
@@ -104,16 +76,16 @@ namespace xfile
 
         struct instance
         {
-            virtual         err                 open            (std::wstring_view FileName, access_types Flags)            noexcept = 0;
+            virtual         xerr                open            (std::wstring_view FileName, access_types Flags)            noexcept = 0;
             virtual         void                close           (void)                                                      noexcept = 0;
-            virtual         err                 Read            (std::span<std::byte> View )                                noexcept = 0;
-            virtual         err                 Write           (const std::span<const std::byte> View )                    noexcept = 0;
-            virtual         err                 Seek            (seek_mode Mode, std::size_t Pos)                           noexcept = 0;
-            virtual         err                 Tell            (std::size_t& Pos )                                         noexcept = 0;
+            virtual         xerr                Read            (std::span<std::byte> View )                                noexcept = 0;
+            virtual         xerr                Write           (const std::span<const std::byte> View )                    noexcept = 0;
+            virtual         xerr                Seek            (seek_mode Mode, std::size_t Pos)                           noexcept = 0;
+            virtual         xerr                Tell            (std::size_t& Pos )                                         noexcept = 0;
             virtual         void                Flush           ()                                                          noexcept = 0;
-            virtual         err                 Length          (std::size_t& L )                                           noexcept = 0;
+            virtual         xerr                Length          (std::size_t& L )                                           noexcept = 0;
             virtual         bool                isEOF           (void)                                                      noexcept = 0;
-            virtual         err                 Synchronize     (bool bBlock)                                               noexcept = 0;
+            virtual         xerr                Synchronize     (bool bBlock)                                               noexcept = 0;
             virtual         void                AsyncAbort      (void)                                                      noexcept = 0;
         };
 
@@ -211,62 +183,62 @@ namespace xfile
     {
         constexpr                               stream          ( void )                                                            noexcept = default;
         inline                                 ~stream          ( void )                                                            noexcept;
-                        err                     open            ( const std::wstring_view FileName, const char* pMode)              noexcept;
+                        xerr                    open            ( const std::wstring_view FileName, const char* pMode)              noexcept;
                         void                    close           ( void )                                                            noexcept;
-        inline          err                     ToFile          ( stream& File )                                                    noexcept;
-        inline          err                     ToMemory        ( std::span<std::byte> View )                                       noexcept;
-        inline          err                     Synchronize     ( bool bBlock )                                                     noexcept;
+        inline          xerr                    ToFile          ( stream& File )                                                    noexcept;
+        inline          xerr                    ToMemory        ( std::span<std::byte> View )                                       noexcept;
+        inline          xerr                    Synchronize     ( bool bBlock )                                                     noexcept;
         inline          void                    AsyncAbort      ( void )                                                            noexcept;
         inline          void                    setForceFlush   ( bool bOnOff)                                                      noexcept;
         inline          void                    Flush           ( void)                                                             noexcept;
-        inline          err                     SeekOrigin      ( std::size_t Offset )                                              noexcept;
-        inline          err                     SeekEnd         ( std::size_t Offset )                                              noexcept;
-        inline          err                     SeekCurrent     ( std::size_t Offset )                                              noexcept;
-        inline          err                     Tell            ( std::size_t& Bytes )                                              noexcept;
+        inline          xerr                    SeekOrigin      ( std::size_t Offset )                                              noexcept;
+        inline          xerr                    SeekEnd         ( std::size_t Offset )                                              noexcept;
+        inline          xerr                    SeekCurrent     ( std::size_t Offset )                                              noexcept;
+        inline          xerr                    Tell            ( std::size_t& Bytes )                                              noexcept;
         inline          bool                    isEOF           ( void )                                                            noexcept;
         inline          bool                    isOpen          ( void )                                                    const   noexcept { return !!m_pInstance; }
-        inline          err                     getC            ( int& C )                                                          noexcept;
-        inline          err                     putC            ( int C, int Count = 1, bool bUpdatePos = true)                     noexcept;
-        inline          err                     AlignPutC       ( int C, int Count = 0, int Aligment = 4, bool bUpdatePos = true)   noexcept;
-        inline          err                     getFileLength   ( std::size_t& Length )                                             noexcept;
+        inline          xerr                    getC            ( int& C )                                                          noexcept;
+        inline          xerr                    putC            ( int C, int Count = 1, bool bUpdatePos = true)                     noexcept;
+        inline          xerr                    AlignPutC       ( int C, int Count = 0, int Aligment = 4, bool bUpdatePos = true)   noexcept;
+        inline          xerr                    getFileLength   ( std::size_t& Length )                                             noexcept;
 
 
-        inline          err                     ReadString      ( std::wstring& Val)                                                noexcept;
-        inline          err                     ReadString      ( std::string& Val )                                                noexcept;
-        inline          err                     WriteString     (const std::string_view View)                                       noexcept;
-        inline          err                     WriteString     (const std::wstring_view View)                                      noexcept;
+        inline          xerr                    ReadString      ( std::wstring& Val)                                                noexcept;
+        inline          xerr                    ReadString      ( std::string& Val )                                                noexcept;
+        inline          xerr                    WriteString     (const std::string_view View)                                       noexcept;
+        inline          xerr                    WriteString     (const std::wstring_view View)                                      noexcept;
 
         template<typename T> requires std::is_trivial_v<T>
-        inline          err                     Write           ( const T&  Val )                                                   noexcept;
+        inline          xerr                    Write           ( const T&  Val )                                                   noexcept;
 
         template<typename T>  requires std::is_trivial_v<T>
-        inline          err                     WriteSpan       ( std::span<T> A )                                                  noexcept;
+        inline          xerr                    WriteSpan       ( std::span<T> A )                                                  noexcept;
 
         template<typename T, std::size_t T_COUNT_V>  requires std::is_trivial_v<T>
-        inline          err                     WriteSpan(std::span<T, T_COUNT_V> A)                                                noexcept;
+        inline          xerr                    WriteSpan(std::span<T, T_COUNT_V> A)                                                noexcept;
 
         template<class T>  requires std::is_trivial_v<T>
-        inline          err                     Read            ( T& Val )                                                          noexcept;
+        inline          xerr                    Read            ( T& Val )                                                          noexcept;
 
         template<class T>  requires std::is_trivial_v<T>
-        inline          err                     ReadSpan        ( std::span<T> Span )                                               noexcept;
+        inline          xerr                    ReadSpan        ( std::span<T> Span )                                               noexcept;
 
         template<class T, std::size_t T_COUNT_V>  requires std::is_trivial_v<T>
-        inline          err                     ReadSpan        ( std::span<T, T_COUNT_V> Span )                                    noexcept;
+        inline          xerr                    ReadSpan        ( std::span<T, T_COUNT_V> Span )                                    noexcept;
 
         inline          bool                    isBinaryMode    ( void )                                                    const   noexcept;
         inline          bool                    isReadMode      ( void )                                                    const   noexcept;
         inline          bool                    isWriteMode     ( void )                                                    const   noexcept;
 
         template<typename... T_ARGS>
-        inline          err                     Printf          ( const char* pFormatStr, const T_ARGS& ... Args )                  noexcept;
+        inline          xerr                    Printf          ( const char* pFormatStr, const T_ARGS& ... Args )                  noexcept;
 
         template<typename... T_ARGS>
-        inline          err                     wPrintf         ( const wchar_t* pFormatStr, const T_ARGS& ... Args )               noexcept;
+        inline          xerr                    wPrintf         ( const wchar_t* pFormatStr, const T_ARGS& ... Args )               noexcept;
 
         void                                    Clear           ( void )                                                            noexcept;
-        err                                     ReadRaw         (std::span<std::byte> View)                                         noexcept;
-        err                                     WriteRaw        (std::span<const std::byte> View)                                   noexcept;
+        xerr                                    ReadRaw         (std::span<std::byte> View)                                         noexcept;
+        xerr                                    WriteRaw        (std::span<const std::byte> View)                                   noexcept;
 
         device::instance*           m_pInstance     { nullptr };
         device::registration*       m_pDeviceReg    { nullptr };

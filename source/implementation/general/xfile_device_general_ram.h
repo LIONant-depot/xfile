@@ -12,7 +12,7 @@ namespace xfile::driver::ram
     {
         //------------------------------------------------------------------------------
 
-        err open (std::wstring_view FileName, xfile::device::access_types AccessTypes)   noexcept override
+        xerr open (std::wstring_view FileName, xfile::device::access_types AccessTypes)   noexcept override
         {
             // File already open
             assert(m_EOF == 0);
@@ -28,10 +28,10 @@ namespace xfile::driver::ram
 
         //------------------------------------------------------------------------------
 
-        err Read (std::span<std::byte> View) noexcept override
+        xerr Read (std::span<std::byte> View) noexcept override
         {
             if (m_SeekPosition >= m_EOF)
-                return err::create<err::state::UNEXPECTED_EOF, "Unexpected End of File">();
+                return xerr::create<state::UNEXPECTED_EOF, "Unexpected End of File">();
 
             auto currentBlockIndex  = m_SeekPosition / block_size_v;
             auto currentBlockOffset = m_SeekPosition % block_size_v;
@@ -53,7 +53,7 @@ namespace xfile::driver::ram
                     currentBlockOffset = 0;
 
                     if (currentBlockIndex >= m_lBlock.size())
-                        return err::create_f<"Fail to read all the bytes from the ram drive">();
+                        return xerr::create_f<state,"Fail to read all the bytes from the ram drive">();
                 }
             }
 
@@ -62,7 +62,7 @@ namespace xfile::driver::ram
 
         //------------------------------------------------------------------------------
 
-        err Write (const std::span<const std::byte> View) noexcept override
+        xerr Write (const std::span<const std::byte> View) noexcept override
         {
             // Check current position and size of data being added.
             const auto NewDataPosition = m_SeekPosition + View.size();
@@ -115,7 +115,7 @@ namespace xfile::driver::ram
 
         //------------------------------------------------------------------------------
 
-        err Seek(xfile::device::seek_mode Mode, std::size_t Pos) noexcept override
+        xerr Seek(xfile::device::seek_mode Mode, std::size_t Pos) noexcept override
         {
             assert(Pos >= 0);
             switch (Mode)
@@ -132,7 +132,7 @@ namespace xfile::driver::ram
 
         //------------------------------------------------------------------------------
 
-        err Tell ( std::size_t& Pos) noexcept override
+        xerr Tell ( std::size_t& Pos) noexcept override
         {
             Pos = m_SeekPosition;
             return {};
@@ -147,7 +147,7 @@ namespace xfile::driver::ram
 
         //------------------------------------------------------------------------------
 
-        err Length(std::size_t& L) noexcept override
+        xerr Length(std::size_t& L) noexcept override
         {
             L = m_EOF;
             return {};
@@ -162,7 +162,7 @@ namespace xfile::driver::ram
 
         //------------------------------------------------------------------------------
 
-        err Synchronize(bool bBlock) noexcept override
+        xerr Synchronize(bool bBlock) noexcept override
         {
             return {};
         }

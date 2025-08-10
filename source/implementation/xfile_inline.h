@@ -21,7 +21,7 @@ namespace xfile
     //------------------------------------------------------------------------------
 
     template<class T> requires std::is_trivial_v<T> 
-    err stream::Write(const T& Val) noexcept
+    xerr stream::Write(const T& Val) noexcept
     {
         assert(m_pInstance);
         return WriteRaw({ reinterpret_cast<const std::byte*>(&Val), sizeof(T)});
@@ -30,7 +30,7 @@ namespace xfile
     //------------------------------------------------------------------------------
 
     template<typename T> requires std::is_trivial_v<T>
-    err stream::WriteSpan(std::span<T> A) noexcept
+    xerr stream::WriteSpan(std::span<T> A) noexcept
     {
         assert(m_pInstance);
         return WriteRaw({ reinterpret_cast< const std::byte*>(A.data()), sizeof( decltype(A[0]) ) * A.size() });
@@ -39,7 +39,7 @@ namespace xfile
     //------------------------------------------------------------------------------
 
     template<typename T, std::size_t T_COUNT_V>  requires std::is_trivial_v<T>
-    err stream::WriteSpan(std::span<T, T_COUNT_V> A) noexcept
+    xerr stream::WriteSpan(std::span<T, T_COUNT_V> A) noexcept
     {
         assert(m_pInstance);
         return WriteRaw({ reinterpret_cast<const std::byte*>(A.data()), sizeof(decltype(A[0])) * T_COUNT_V });
@@ -48,7 +48,7 @@ namespace xfile
     //------------------------------------------------------------------------------
 
     template<class T> requires std::is_trivial_v<T>
-    err stream::Read( T& Val ) noexcept
+    xerr stream::Read( T& Val ) noexcept
     {
         assert(m_pInstance);
         return ReadRaw({ reinterpret_cast<std::byte*>(&Val), sizeof(T) });
@@ -57,7 +57,7 @@ namespace xfile
     //------------------------------------------------------------------------------
 
     template<typename T> requires std::is_trivial_v<T>
-    err stream::ReadSpan(std::span<T> A) noexcept
+    xerr stream::ReadSpan(std::span<T> A) noexcept
     {
         assert(m_pInstance);
         return ReadRaw({ reinterpret_cast<std::byte*>(A.data()), sizeof(decltype(A[0])) * A.size() });
@@ -66,7 +66,7 @@ namespace xfile
     //------------------------------------------------------------------------------
 
     template<class T, std::size_t T_COUNT_V>  requires std::is_trivial_v<T>
-    err stream::ReadSpan(std::span<T, T_COUNT_V> A)                                    noexcept
+    xerr stream::ReadSpan(std::span<T, T_COUNT_V> A)                                    noexcept
     {
         assert(m_pInstance);
         return ReadRaw({ reinterpret_cast<std::byte*>(A.data()), sizeof(decltype(A[0])) * T_COUNT_V });
@@ -116,12 +116,12 @@ namespace xfile
 
     //------------------------------------------------------------------------------
     inline
-    err stream::Synchronize(bool bBlock) noexcept
+    xerr stream::Synchronize(bool bBlock) noexcept
     {
         assert(m_pInstance);
         if( m_AccessType.m_bASync == false )
         {
-            if (isEOF()) return err::create<err::state::UNEXPECTED_EOF, "Synchronize end of file">();
+            if (isEOF()) return xerr::create<state::UNEXPECTED_EOF, "Synchronize end of file">();
             return {};
         }
 
@@ -138,7 +138,7 @@ namespace xfile
 
     //------------------------------------------------------------------------------
     inline
-    err stream::SeekOrigin( std::size_t Offset ) noexcept
+    xerr stream::SeekOrigin( std::size_t Offset ) noexcept
     {
         assert(m_pInstance);
         return m_pInstance->Seek( device::SKM_ORIGIN, Offset );
@@ -146,7 +146,7 @@ namespace xfile
 
     //------------------------------------------------------------------------------
     inline
-    err stream::SeekEnd(std::size_t  Offset ) noexcept
+    xerr stream::SeekEnd(std::size_t  Offset ) noexcept
     {
         assert(m_pInstance);
         return m_pInstance->Seek( device::SKM_END, Offset );
@@ -154,7 +154,7 @@ namespace xfile
 
     //------------------------------------------------------------------------------
     inline
-    err stream::SeekCurrent(std::size_t Offset ) noexcept
+    xerr stream::SeekCurrent(std::size_t Offset ) noexcept
     {
         assert(m_pInstance);
         return m_pInstance->Seek( device::SKM_CURENT, Offset );
@@ -162,7 +162,7 @@ namespace xfile
 
     //------------------------------------------------------------------------------
     inline
-    err stream::Tell(std::size_t& Pos ) noexcept
+    xerr stream::Tell(std::size_t& Pos ) noexcept
     {
         assert(m_pInstance);
         return m_pInstance->Tell(Pos);
@@ -178,7 +178,7 @@ namespace xfile
 
     //------------------------------------------------------------------------------
     inline
-    err stream::getC( int& C ) noexcept
+    xerr stream::getC( int& C ) noexcept
     {
         assert(m_pInstance);
         std::uint8_t x;
@@ -191,7 +191,7 @@ namespace xfile
 
     //------------------------------------------------------------------------------
     inline
-    err stream::putC( int aC, int Count, bool bUpdatePos ) noexcept
+    xerr stream::putC( int aC, int Count, bool bUpdatePos ) noexcept
     {
         assert( aC >= 0 && aC <= 0xff);
         assert(m_pInstance);
@@ -223,7 +223,7 @@ namespace xfile
 
     //------------------------------------------------------------------------------
     inline
-    err stream::AlignPutC( int C, int Count, int Aligment, bool bUpdatePos ) noexcept
+    xerr stream::AlignPutC( int C, int Count, int Aligment, bool bUpdatePos ) noexcept
     {
         assert(C >= 0 && C <= 0xff);
         assert(m_pInstance);
@@ -242,7 +242,7 @@ namespace xfile
 
     //------------------------------------------------------------------------------
     inline
-    err stream::getFileLength( std::size_t& Length ) noexcept
+    xerr stream::getFileLength( std::size_t& Length ) noexcept
     {
         assert(m_pInstance);
         return m_pInstance->Length(Length);
@@ -250,7 +250,7 @@ namespace xfile
 
     //------------------------------------------------------------------------------
     inline
-    err stream::ToFile( stream& File ) noexcept
+    xerr stream::ToFile( stream& File ) noexcept
     {
         // Seek at the begging of the file
         if( auto Err = SeekOrigin( 0 ); Err ) 
@@ -293,9 +293,9 @@ namespace xfile
 
     //------------------------------------------------------------------------------
     inline
-    err stream::ToMemory( std::span<std::byte> View ) noexcept
+    xerr stream::ToMemory( std::span<std::byte> View ) noexcept
     {
-        err Error;
+        xerr Error;
 
         // Seek at the begging of the file
         if ( auto Err = SeekOrigin(0); Err ) 
@@ -306,7 +306,7 @@ namespace xfile
             return Err;
 
         if ( Length < View.size()) 
-            return err::create_f<"Buffer is too small">();
+            return xerr::create_f<state, "Buffer is too small">();
 
         return ReadRaw({ View.data(), Length });
     }
@@ -314,7 +314,7 @@ namespace xfile
     //------------------------------------------------------------------------------
 
     inline
-    err stream::ReadString( std::string& Buffer) noexcept
+    xerr stream::ReadString( std::string& Buffer) noexcept
     {
         int c;
 
@@ -334,7 +334,7 @@ namespace xfile
 
     //------------------------------------------------------------------------------
 
-    err stream::WriteString( const std::string_view String ) noexcept
+    xerr stream::WriteString( const std::string_view String ) noexcept
     {
         if ( auto Err = m_pInstance->Write( { reinterpret_cast<const std::byte*>(String.data()), String.length() } ); Err )
             return Err;
@@ -351,7 +351,7 @@ namespace xfile
 
     //------------------------------------------------------------------------------
 
-    err stream::WriteString(const std::wstring_view String) noexcept
+    xerr stream::WriteString(const std::wstring_view String) noexcept
     {
         if (auto Err = m_pInstance->Write({ reinterpret_cast<const std::byte*>(String.data()), String.length()*2 }); Err)
             return Err;
@@ -370,7 +370,7 @@ namespace xfile
     //------------------------------------------------------------------------------
 
     template<typename... T_ARGS> inline
-    err stream::Printf( const char* pFormatStr, const T_ARGS& ... Args ) noexcept
+    xerr stream::Printf( const char* pFormatStr, const T_ARGS& ... Args ) noexcept
     {
         constexpr auto size = 512;
         auto Scratch = std::make_unique<char[]>(size);
@@ -381,7 +381,7 @@ namespace xfile
     //------------------------------------------------------------------------------
 
     template<typename... T_ARGS> inline
-    err stream::wPrintf(const wchar_t* pFormatStr, const T_ARGS& ... Args) noexcept
+    xerr stream::wPrintf(const wchar_t* pFormatStr, const T_ARGS& ... Args) noexcept
     {
         constexpr auto size = 512;
         auto Scratch = std::make_unique<wchar_t[]>(size);

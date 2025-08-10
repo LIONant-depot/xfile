@@ -4,7 +4,7 @@ namespace xfile::unit_test
 {
     //-----------------------------------------------------------------------------------------
 
-    err syncModeTest( std::wstring_view FileName, bool bCloseFile )
+    xerr syncModeTest( std::wstring_view FileName, bool bCloseFile )
     {
         xfile::stream           File;
 
@@ -122,7 +122,7 @@ namespace xfile::unit_test
 
     //-----------------------------------------------------------------------------------------
 
-    err asyncModeTest( std::wstring_view FileName, bool bCloseFile)
+    xerr asyncModeTest( std::wstring_view FileName, bool bCloseFile)
     {
         constexpr static int    Steps    = 10;
         constexpr static int    DataSize = 1024 * Steps;
@@ -159,7 +159,7 @@ namespace xfile::unit_test
 
                     if (auto Err = File.WriteSpan(std::span(Buffer[i & 1].get(), DataSize)); Err )
                     {
-                        if (Err.getState() == xfile::err::state::INCOMPLETE) Err.clear();
+                        if (Err.getState<xfile::state>() == xfile::state::INCOMPLETE) Err.clear();
                         else return Err;
                     }
                 }
@@ -196,7 +196,7 @@ namespace xfile::unit_test
                 // Read the first entry
                 if (auto Err = File.ReadSpan(std::span(Buffer[0].get(), DataSize)); Err )
                 {
-                    if ( Err.getState() == xfile::err::state::INCOMPLETE) Err.clear();
+                    if ( Err.getState<state>() == xfile::state::INCOMPLETE) Err.clear();
                     else return Err;
                 }
 
@@ -205,7 +205,7 @@ namespace xfile::unit_test
                 {
                     if (auto Err = File.ReadSpan(std::span( Buffer[i & 1].get(), DataSize)); Err )
                     {
-                        if ( Err.getState() == xfile::err::state::INCOMPLETE) Err.clear();
+                        if ( Err.getState<state>() == xfile::state::INCOMPLETE) Err.clear();
                         else return Err;
                     }
 

@@ -150,7 +150,7 @@ namespace xfile
 
     //------------------------------------------------------------------------------
 
-    err stream::open( const std::wstring_view Path, const char* pMode) noexcept
+    xerr stream::open( const std::wstring_view Path, const char* pMode) noexcept
     {
         assert(pMode);
 
@@ -164,7 +164,7 @@ namespace xfile
 
         // Make sure that we got a device
         if (m_pDeviceReg == nullptr) 
-            return err::create<err::state::DEVICE_FAILURE, "Unable to find requested device">();
+            return xerr::create<state::DEVICE_FAILURE, "Unable to find requested device">();
 
         //
         // Okay now lets make sure that the mode is correct
@@ -233,7 +233,7 @@ namespace xfile
                     m_pDeviceReg->m_pDevice->destroyInstance(*m_pInstance);
                     m_pInstance = nullptr;
                     --m_pDeviceReg->s_nInUse;
-                    return err::create<err::state::INCOMPLETE, "Able to open the file but failed to seek at the end of the file">();
+                    return xerr::create<state::INCOMPLETE, "Able to open the file but failed to seek at the end of the file">();
                 }
             }
         }
@@ -263,7 +263,7 @@ namespace xfile
 
     //------------------------------------------------------------------------------
 
-    err stream::ReadRaw(std::span<std::byte> View) noexcept
+    xerr stream::ReadRaw(std::span<std::byte> View) noexcept
     {
         assert(m_pInstance);
         assert(View.empty() == false);
@@ -324,7 +324,7 @@ namespace xfile
             {
                 if (( View.size()&1) == 0 )
                 {
-                    return err::create_f<"The text buffer you are trying to read is not multiple of 2... For wide character it needs to be multiple of 2">();
+                    return xerr::create_f<state,"The text buffer you are trying to read is not multiple of 2... For wide character it needs to be multiple of 2">();
                 }
                 auto     wView    = std::span(reinterpret_cast<wchar_t*>(View.data()), View.size()/2);
                 wchar_t* pCharSrc = wView.data();
@@ -377,7 +377,7 @@ namespace xfile
 
     //------------------------------------------------------------------------------
 
-    err stream::WriteRaw(std::span<const std::byte> View) noexcept
+    xerr stream::WriteRaw(std::span<const std::byte> View) noexcept
     {
         assert(m_pInstance);
         assert(View.empty() == false);

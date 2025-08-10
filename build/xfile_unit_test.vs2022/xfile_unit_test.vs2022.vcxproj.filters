@@ -18,6 +18,9 @@
     <ClInclude Include="..\..\source\implementation\xfile_inline.h">
       <Filter>Implementation</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\dependencies\xerr\source\xerr.h">
+      <Filter>dendencies</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Unit-Test">
@@ -31,6 +34,9 @@
     </Filter>
     <Filter Include="Implementation\Generic">
       <UniqueIdentifier>{6c9f882a-d8cf-4441-9e14-4d55ddf10cb5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dendencies">
+      <UniqueIdentifier>{8ef39531-2910-4e56-89e8-2ff33ae73494}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
