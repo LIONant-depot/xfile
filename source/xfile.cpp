@@ -249,13 +249,14 @@ namespace xfile
         {
             m_pInstance->close();
             --m_pDeviceReg->s_nInUse;
+            assert(m_pDeviceReg->s_nInUse >= 0);
             m_pDeviceReg->m_pDevice->destroyInstance(*m_pInstance);
         }
 
         //
         // Done with the file
         //
-        m_pInstance = nullptr;
+        m_pInstance  = nullptr;
         m_pDeviceReg = nullptr;
         m_AccessType.m_Value = 0;
         m_FilePath.clear();

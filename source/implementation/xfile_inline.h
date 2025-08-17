@@ -13,6 +13,19 @@ namespace xfile
 
     //------------------------------------------------------------------------------
 
+    constexpr
+    stream::stream(stream&& Entry) noexcept
+    {
+        m_pInstance    = Entry.m_pInstance;
+        m_pDeviceReg   = Entry.m_pDeviceReg;
+        m_AccessType   = Entry.m_AccessType;
+        m_FilePath     = std::move(Entry.m_FilePath);
+
+        Entry.m_pInstance = nullptr;
+    }
+
+    //------------------------------------------------------------------------------
+
     stream::~stream(void) noexcept
     {
         if (m_pInstance) close();

@@ -182,6 +182,7 @@ namespace xfile
     struct stream
     {
         constexpr                               stream          ( void )                                                            noexcept = default;
+        constexpr                               stream          ( stream&& )                                                        noexcept;
         inline                                 ~stream          ( void )                                                            noexcept;
                         xerr                    open            ( const std::wstring_view FileName, const char* pMode)              noexcept;
                         void                    close           ( void )                                                            noexcept;
