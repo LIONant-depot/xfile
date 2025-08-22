@@ -30,7 +30,7 @@ if(NOT TARGET xfile)
   add_library(xfile INTERFACE)
 
   # determine the root of our library
-  if("${TARGET_PROJECT}" STREQUAL "xfile_unit_test")
+  if(DEFINED TARGET_PROJECT AND "${TARGET_PROJECT}" STREQUAL "xfile_unit_test")
     set(ROOT ".")
   else()
     set(ROOT "dependencies/xfile")
