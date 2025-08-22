@@ -36,20 +36,20 @@ if(NOT TARGET xfile)
     set(ROOT "dependencies/xfile")
 
     # set the include path
-    set(xfile_INCLUDE_LIST "${ROOT}")
+    set(XFILE_INCLUDE_LIST "${ROOT}")
   endif()
 
   # set the files required
-  set(xfile_FILES_LIST
+  set(XFILE_FILES_LIST
     "${ROOT}/source/xfile.h"
     "${ROOT}/source/xfile.cpp"
     "${ROOT}/README.md"
   )
 
   # Set global properties
-  set_property(GLOBAL PROPERTY xfile_GROUP "dependencies/xcore/xfile")
-  set_property(GLOBAL PROPERTY xfile_FILES "${xfile_FILES_LIST}")
-  set_property(GLOBAL PROPERTY xfile_INCLUDES "${xfile_INCLUDE_LIST}")
-  set_property(GLOBAL APPEND PROPERTY COMPONENT_REGISTRY "xfile")
+  set_property(GLOBAL PROPERTY XFILE_GROUP "dependencies/xcore/xfile")
+  set_property(GLOBAL PROPERTY XFILE_FILES "${XFILE_FILES_LIST}")
+  set_property(GLOBAL PROPERTY XFILE_INCLUDES "${XFILE_INCLUDE_LIST}")
+  set_property(GLOBAL APPEND PROPERTY COMPONENT_REGISTRY "XFILE")
 
 endif()
