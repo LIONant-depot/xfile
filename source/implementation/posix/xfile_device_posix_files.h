@@ -94,9 +94,9 @@ namespace xfile::driver::posix
                     if (n == 0) break;
                     Done += static_cast<std::size_t>(n);
                 }
-                m_bLastReadHitEOF = (Done < View.size());
-                // Same as ReadFile: nothing at all left to read is an EOF error, a short read is not.
-                if (Done == 0 && View.size() > 0)
+                // Same as ReadFile: nothing at all left to read is an EOF error (and what isEOF reports), a short read is not.
+                m_bLastReadHitEOF = (Done == 0 && View.size() > 0);
+                if (m_bLastReadHitEOF)
                     return xerr::create<state::UNEXPECTED_EOF, "Unexpected End Of File while reading">();
                 return {};
             }
@@ -165,12 +165,12 @@ namespace xfile::driver::posix
                 return {};
             }
 
+            // As the Windows device: end of file is a read that found nothing left, not being positioned at the end. A stream
+            // that read its last block exactly up to the end is not at EOF yet (xserializer's LoadObject Synchronize()s after
+            // that read and asserted on every resource whose last block ends the file).
             bool isEOF(void) noexcept override
             {
-                if (m_bLastReadHitEOF) return true;
-                std::size_t Pos = 0, Len = 0;
-                if (Tell(Pos) || Length(Len)) return true;
-                return Pos >= Len;
+                return m_bLastReadHitEOF;
             }
 
             xerr Synchronize(bool) noexcept override
