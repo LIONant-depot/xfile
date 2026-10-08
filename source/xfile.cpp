@@ -4,7 +4,11 @@
 #include <cwctype>
 
 
-#include "implementation/windows/xfile_device_window_files.h"
+#if defined(_WIN32)
+    #include "implementation/windows/xfile_device_window_files.h"
+#else
+    #include "implementation/posix/xfile_device_posix_files.h"
+#endif
 #include "implementation/general/xfile_device_general_ram.h"
 
 
@@ -29,6 +33,11 @@ namespace xfile
     std::wstring_view fromPathGetDeviceName(std::wstring_view Path) noexcept
     {
         if (Path.empty()) return {};
+
+    #if !defined(_WIN32)
+        // POSIX: absolute paths have no drive letter - they all belong to the "/:" device (posix file device)
+        if (Path[0] == L'/') return L"/:";
+    #endif
 
         // Does it have a device?
         for( std::size_t i = 0, end = Path.length(); (i < end); i++)
@@ -73,6 +82,11 @@ namespace xfile
         std::wstring DeviceNameLower;
         {
             std::wstring_view DeviceName;
+        #if !defined(_WIN32)
+            // POSIX absolute path: "/:" pseudo device, path used verbatim (a ':' later in it is not a device)
+            if (Path.empty() == false && Path[0] == L'/') DeviceName = L"/:";
+            else
+        #endif
             for (std::size_t i = 0, end = Path.length(); (i < end); i++)
             {
                 if (Path[i] == L':')
