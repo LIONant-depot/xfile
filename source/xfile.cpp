@@ -22,7 +22,7 @@ namespace xfile
     {
         if ( TempPath.empty() ) 
         {
-            TempPath = std::filesystem::temp_directory_path();
+            TempPath = std::filesystem::temp_directory_path().wstring();
         }
 
         return TempPath;
@@ -49,7 +49,7 @@ namespace xfile
         }
 
         // If it does not have a device assign in the path we will assume it is the working path...
-        return fromPathGetDeviceName( std::filesystem::current_path().c_str() );
+        return fromPathGetDeviceName( std::filesystem::current_path().wstring() );
     }
 
     //------------------------------------------------------------------------------
@@ -104,7 +104,7 @@ namespace xfile
             // If the user did not enter any device name we will assume it is using the current_path...
             if (DeviceName.empty())
             {
-                FinalPath = std::format(L"{}//{}", std::filesystem::current_path().c_str(), Path);
+                FinalPath = std::format(L"{}//{}", std::filesystem::current_path().wstring(), Path);
                 DeviceNameLower = to_lower(fromPathGetDeviceName(FinalPath));
             }
             // If the user is using the temp drive we must actually use the right path

@@ -388,7 +388,7 @@ namespace xfile
         constexpr auto size = 512;
         auto Scratch = std::make_unique<char[]>(size);
         std::size_t c = _sprintf(Scratch.get(), size, pFormatStr, Args...);
-        return WriteSpan( {reinterpret_cast<const std::byte*>(Scratch.get()), c});
+        return WriteSpan( std::span<const std::byte>{reinterpret_cast<const std::byte*>(Scratch.get()), c} );
     }
 
     //------------------------------------------------------------------------------
@@ -399,6 +399,6 @@ namespace xfile
         constexpr auto size = 512;
         auto Scratch = std::make_unique<wchar_t[]>(size);
         std::size_t c = _wsprintf(Scratch.get(), size, pFormatStr, Args...);
-        return WriteSpan({ reinterpret_cast<const std::byte*>(Scratch.get()), c*2 });
+        return WriteSpan( std::span<const std::byte>{reinterpret_cast<const std::byte*>(Scratch.get()), c*2 } );
     }
 }
