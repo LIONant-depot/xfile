@@ -555,5 +555,5 @@ namespace xfile::driver::windows
     // Registration functions... here we create the device as well as we register with the file system
     //
     static xfile::driver::windows::device   s_WindowDevice;
-    static device::registration             s_WindowsDeviceRegistration("WindowsDevice", s_WindowDevice, "a:b:c:d:e:f:g:h:i:j:k:l:m:n:o:p:q:r:s:t:u:v:w:x:y:z:");
+    static device::registration             s_WindowsDeviceRegistration("WindowsDevice", s_WindowDevice, "a:b:c:d:e:f:g:h:i:j:k:l:m:n:o:p:q:r:s:t:u:v:w:x:y:z:unc:");
 }

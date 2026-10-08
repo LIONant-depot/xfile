@@ -39,6 +39,12 @@ namespace xfile
         if (Path[0] == L'/') return L"/:";
     #endif
 
+    #if defined(_WIN32)
+        // UNC path (\\server\share\... or //server/share/...): no drive letter - the Windows file device opens it as given.
+        // (Without this a project on \\wsl.localhost\... recursed through current_path() forever: stack overflow.)
+        if (Path.size() >= 2 && (Path[0] == L'\\' || Path[0] == L'/') && (Path[1] == L'\\' || Path[1] == L'/')) return L"unc:";
+    #endif
+
         // Does it have a device?
         for( std::size_t i = 0, end = Path.length(); (i < end); i++)
         {
@@ -85,6 +91,10 @@ namespace xfile
         #if !defined(_WIN32)
             // POSIX absolute path: "/:" pseudo device, path used verbatim (a ':' later in it is not a device)
             if (Path.empty() == false && Path[0] == L'/') DeviceName = L"/:";
+            else
+        #else
+            // UNC path: the Windows file device ("unc:"), the path is used verbatim
+            if (Path.size() >= 2 && (Path[0] == L'\\' || Path[0] == L'/') && (Path[1] == L'\\' || Path[1] == L'/')) DeviceName = L"unc:";
             else
         #endif
             for (std::size_t i = 0, end = Path.length(); (i < end); i++)
