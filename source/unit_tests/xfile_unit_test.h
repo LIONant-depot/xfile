@@ -1,4 +1,10 @@
 #include <string>
+#include <cassert>
+#include <cstdio>
+#include <cstring>
+#include <filesystem>
+#include <format>
+#include <vector>
 
 namespace xfile::unit_test
 {
@@ -235,6 +241,70 @@ namespace xfile::unit_test
 
     //-----------------------------------------------------------------------------------------
 
+    // The buffer device (xfile::BufferPath): reads, seeks and the length over the caller's memory; past the end fails; writing fails
+    inline void bufferDeviceTest(void)
+    {
+        std::array<std::byte, 1000> Data;
+        for (std::size_t i = 0; i < Data.size(); ++i) Data[i] = std::byte(i * 7);
+        xfile::stream File;
+        auto Err = File.open(xfile::BufferPath(Data), "rb");
+        assert(!Err);
+        std::size_t L = 0;
+        Err = File.getFileLength(L);
+        assert(!Err && L == Data.size());
+        std::array<std::byte, 300> A;
+        Err = File.ReadSpan(std::span{ A });
+        assert(!Err && A[0] == Data[0] && A[299] == Data[299]);
+        Err = File.SeekOrigin(700);
+        assert(!Err);
+        Err = File.ReadSpan(std::span{ A });
+        assert(!Err && A[299] == Data[999] && !File.isEOF() && "reading up to the end exactly is not the end of file yet");
+        Err = File.Synchronize(true);
+        assert(!Err);
+        Err = File.SeekOrigin(990);
+        assert(!Err);
+        Err = File.ReadSpan(std::span{ A });
+        assert(!Err && A[9] == Data[999] && "a read crossing the end gets what there is (as the file devices)");
+        Err = File.ReadSpan(std::span{ A });
+        assert(Err && "a read past the end fails");
+        Err.clear();
+        File.close();
+        xfile::stream W;
+        Err = W.open(xfile::BufferPath(Data), "wb");
+        assert(Err && "the buffer device is read only");
+        Err.clear();
+        std::printf("buffer device: PASS\n");
+    }
+
+    // ReadWholeFile: files of sizes around the sector and the request size (1 MB, 16 in flight: 20.5 MB needs the ring of requests to
+    // turn), each read back byte for byte into one reused buffer; a missing file fails
+    inline void readWholeFileTest(void)
+    {
+        xfile::read_buffer Buffer;
+        for (const std::size_t Size : { std::size_t(0), std::size_t(1), std::size_t(4095), std::size_t(4097), std::size_t(1) << 20, (std::size_t(41) << 19) + 123, std::size_t(3000) })
+        {
+            std::vector<std::byte> Data(Size);
+            for (std::size_t i = 0; i < Size; ++i) Data[i] = std::byte((i * 2654435761u) >> 13);
+            const std::wstring Path = std::format(L"{}xfile_readwhole_{}.bin", xfile::getTempPath(), Size);
+            {
+                xfile::stream W;
+                auto Err = W.open(Path, "wb");
+                assert(!Err);
+                if (Size) Err = W.WriteSpan(std::span{ Data });
+                assert(!Err);
+            }
+            std::span<const std::byte> Out;
+            auto Err = xfile::ReadWholeFile(Path, Buffer, Out);
+            assert(!Err && Out.size() == Size && (Size == 0 || std::memcmp(Out.data(), Data.data(), Size) == 0));
+            std::filesystem::remove(Path);
+        }
+        std::span<const std::byte> Out;
+        auto Err = xfile::ReadWholeFile(L"temp:/no_such_file_xfile.bin", Buffer, Out);
+        assert(Err && Out.empty());
+        Err.clear();
+        std::printf("ReadWholeFile: PASS\n");
+    }
+
     void Tests(void)
     {
         for (int i = 0; i < 2; ++i)
@@ -245,6 +315,9 @@ namespace xfile::unit_test
 
         (void)syncModeTest( L"ram:/test.dat", false);
         (void)asyncModeTest( L"ram:/asyncMode.dat", false);
+
+        bufferDeviceTest();
+        readWholeFileTest();
 
         int a = 22;
     }

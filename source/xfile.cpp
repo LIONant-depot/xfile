@@ -2,6 +2,11 @@
 #include <cassert>
 #include <filesystem>
 #include <cwctype>
+#include <cstring>
+#include <cwchar>
+#include <format>
+#include <cstdio>
+#include <cstdlib>
 
 
 #if defined(_WIN32)
@@ -10,6 +15,7 @@
     #include "implementation/posix/xfile_device_posix_files.h"
 #endif
 #include "implementation/general/xfile_device_general_ram.h"
+#include "implementation/general/xfile_device_general_buffer.h"
 
 
 static std::wstring TempPath;
@@ -26,6 +32,85 @@ namespace xfile
         }
 
         return TempPath;
+    }
+
+    //------------------------------------------------------------------------------
+
+    read_buffer::~read_buffer(void) noexcept
+    {
+    #if defined(_WIN32)
+        if (m_pData) VirtualFree(m_pData, 0, MEM_RELEASE);
+    #else
+        std::free(m_pData);
+    #endif
+    }
+
+    //------------------------------------------------------------------------------
+    // ponytail: Windows only at full speed (unbuffered overlapped requests); elsewhere a plain read - io_uring with O_DIRECT when it matters
+
+    xerr ReadWholeFile(std::wstring_view Path, read_buffer& Buffer, std::span<const std::byte>& Out) noexcept
+    {
+        Out = {};
+    #if defined(_WIN32)
+        const std::wstring P(Path);
+        HANDLE h = CreateFileW(P.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_FLAG_NO_BUFFERING | FILE_FLAG_OVERLAPPED, nullptr);
+        if (h == INVALID_HANDLE_VALUE) return xerr::create_f<state, "ReadWholeFile: the file could not be opened">();
+        LARGE_INTEGER L{};
+        if (!GetFileSizeEx(h, &L)) { CloseHandle(h); return xerr::create_f<state, "ReadWholeFile: no file size">(); }
+        const std::size_t Size = static_cast<std::size_t>(L.QuadPart), Aligned = (Size + 4095) & ~std::size_t(4095);     // (unbuffered: whole sectors, into sector-aligned memory)
+        if (Buffer.m_Capacity < Aligned)
+        {
+            if (Buffer.m_pData) VirtualFree(Buffer.m_pData, 0, MEM_RELEASE);
+            Buffer.m_pData    = static_cast<std::byte*>(VirtualAlloc(nullptr, Aligned, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+            Buffer.m_Capacity = Buffer.m_pData ? Aligned : 0;
+            if (!Buffer.m_pData) { CloseHandle(h); return xerr::create_f<state, "ReadWholeFile: out of memory">(); }
+        }
+
+        constexpr std::size_t   chunk_v     = std::size_t(1) << 20;
+        constexpr int           in_flight_v = 16;
+        const std::size_t       nChunks     = (Aligned + chunk_v - 1) / chunk_v;
+        std::array<OVERLAPPED, in_flight_v> Slots{};
+        for (auto& O : Slots) O.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        bool        bFailed = false;
+        std::size_t Got = 0, nIssued = 0;
+        const auto Issue = [&](std::size_t i)
+        {
+            auto& O = Slots[i % in_flight_v];
+            const std::uint64_t At = std::uint64_t(i) * chunk_v;
+            ResetEvent(O.hEvent);
+            O.Offset = DWORD(At); O.OffsetHigh = DWORD(At >> 32); O.Internal = O.InternalHigh = 0;
+            if (!ReadFile(h, Buffer.m_pData + At, DWORD(std::min(chunk_v, Aligned - At)), nullptr, &O) && GetLastError() != ERROR_IO_PENDING) bFailed = true;
+            ++nIssued;
+        };
+        for (std::size_t i = 0; i < nChunks && i < in_flight_v; ++i) Issue(i);
+        for (std::size_t i = 0; i < nIssued; ++i)
+        {
+            DWORD n = 0;
+            if (GetOverlappedResult(h, &Slots[i % in_flight_v], &n, TRUE)) Got += n;
+            else if (GetLastError() != ERROR_HANDLE_EOF) bFailed = true;
+            if (!bFailed && i + in_flight_v < nChunks) Issue(i + in_flight_v);
+        }
+        for (auto& O : Slots) CloseHandle(O.hEvent);
+        CloseHandle(h);
+        if (bFailed || Got < Size) return xerr::create_f<state, "ReadWholeFile: the file could not be read">();
+        Out = { Buffer.m_pData, Size };
+        return {};
+    #else
+        std::FILE* f = std::fopen(std::filesystem::path(Path).string().c_str(), "rb");
+        if (!f) return xerr::create_f<state, "ReadWholeFile: the file could not be opened">();
+        std::fseek(f, 0, SEEK_END); const std::size_t Size = static_cast<std::size_t>(std::ftell(f)); std::fseek(f, 0, SEEK_SET);
+        if (Buffer.m_Capacity < Size)
+        {
+            std::free(Buffer.m_pData);
+            Buffer.m_pData    = static_cast<std::byte*>(std::malloc(Size));
+            Buffer.m_Capacity = Buffer.m_pData ? Size : 0;
+        }
+        const bool bOk = Buffer.m_pData && std::fread(Buffer.m_pData, 1, Size, f) == Size;
+        std::fclose(f);
+        if (!bOk) return xerr::create_f<state, "ReadWholeFile: the file could not be read">();
+        Out = { Buffer.m_pData, Size };
+        return {};
+    #endif
     }
 
     //------------------------------------------------------------------------------

@@ -41,6 +41,25 @@ namespace xfile
     //------------------------------------------------------------------------------
     const std::wstring_view getTempPath             ( void )                        noexcept;
     std::wstring_view       fromPathGetDeviceName   ( std::wstring_view Path )      noexcept;
+    // The path of the buffer device ("buffer:"): a read-only file over the caller's memory, which must outlive the stream (a file read
+    // by the caller's own means - e.g. at full disk speed - then parsed by code written for xfile streams, xserializer)
+    std::wstring            BufferPath              ( std::span<const std::byte> Data ) noexcept;
+
+    // Memory for ReadWholeFile: sector aligned, grown when a file does not fit and kept (one per thread, reused: no page faults per file)
+    struct read_buffer
+    {
+        std::byte*      m_pData     = nullptr;
+        std::size_t     m_Capacity  = 0;
+                        read_buffer ( void ) noexcept = default;
+                        read_buffer ( const read_buffer& ) = delete;
+        read_buffer&    operator=   ( const read_buffer& ) = delete;
+                       ~read_buffer ( void ) noexcept;
+    };
+
+    // A whole file at the disk's speed: the file cache bypassed, the file read in 1 MB requests with up to 16 in flight (a disk gives its
+    // full speed only to several requests at once - measured 2.6 GB/s one at a time, 6.6 with 4+ on an NVMe); Out views the bytes in
+    // Buffer (valid until its next use). A non-Windows build reads it plainly. Small files gain nothing: meant for big ones.
+    xerr                    ReadWholeFile           ( std::wstring_view Path, read_buffer& Buffer, std::span<const std::byte>& Out ) noexcept;
 
     //------------------------------------------------------------------------------
     // Description:
@@ -87,6 +106,8 @@ namespace xfile
             virtual         bool                isEOF           (void)                                                      noexcept = 0;
             virtual         xerr                Synchronize     (bool bBlock)                                               noexcept = 0;
             virtual         void                AsyncAbort      (void)                                                      noexcept = 0;
+            // A device whose file is memory (the buffer device): all of it, so a reader can use the bytes where they are (none: a copy is read)
+            virtual         const std::byte*    getMemory       (void)                                                      noexcept { return nullptr; }
         };
 
         constexpr                       device          (void)                          noexcept = default;
@@ -198,6 +219,8 @@ namespace xfile
         inline          xerr                    Tell            ( std::size_t& Bytes )                                              noexcept;
         inline          bool                    isEOF           ( void )                                                            noexcept;
         inline          bool                    isOpen          ( void )                                                    const   noexcept { return !!m_pInstance; }
+        // The file's bytes when it is memory (xfile::BufferPath): from offset 0, getFileLength of them; nullptr otherwise
+        inline          const std::byte*        getMemory       ( void )                                                            noexcept { return m_pInstance ? m_pInstance->getMemory() : nullptr; }
         inline          xerr                    getC            ( int& C )                                                          noexcept;
         inline          xerr                    putC            ( int C, int Count = 1, bool bUpdatePos = true)                     noexcept;
         inline          xerr                    AlignPutC       ( int C, int Count = 0, int Aligment = 4, bool bUpdatePos = true)   noexcept;
