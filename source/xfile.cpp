@@ -8,6 +8,15 @@
 #include <cstdio>
 #include <cstdlib>
 
+// The profiler's memory map (xprofile): where xprofile is part of the build; empty otherwise
+#if __has_include("xprofile.h")
+    #include "xprofile.h"
+#endif
+#ifndef XPROFILE_MEM_REGION
+    #define XPROFILE_MEM_REGION(POOL, REGION, SIZE)             do {} while (0)
+    #define XPROFILE_MEM_ALLOC(POOL, REGION, OFFSET, SIZE, TAG) do {} while (0)
+#endif
+
 
 #if defined(_WIN32)
     #include "implementation/windows/xfile_device_window_files.h"
@@ -38,6 +47,7 @@ namespace xfile
 
     read_buffer::~read_buffer(void) noexcept
     {
+        if (m_pData) XPROFILE_MEM_REGION("CPU: streaming", reinterpret_cast<std::uint64_t>(m_pData), 0);
     #if defined(_WIN32)
         if (m_pData) VirtualFree(m_pData, 0, MEM_RELEASE);
     #else
@@ -60,9 +70,10 @@ namespace xfile
         const std::size_t Size = static_cast<std::size_t>(L.QuadPart), Aligned = (Size + 4095) & ~std::size_t(4095);     // (unbuffered: whole sectors, into sector-aligned memory)
         if (Buffer.m_Capacity < Aligned)
         {
-            if (Buffer.m_pData) VirtualFree(Buffer.m_pData, 0, MEM_RELEASE);
+            if (Buffer.m_pData) { XPROFILE_MEM_REGION("CPU: streaming", reinterpret_cast<std::uint64_t>(Buffer.m_pData), 0); VirtualFree(Buffer.m_pData, 0, MEM_RELEASE); }
             Buffer.m_pData    = static_cast<std::byte*>(VirtualAlloc(nullptr, Aligned, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
             Buffer.m_Capacity = Buffer.m_pData ? Aligned : 0;
+            if (Buffer.m_pData) { XPROFILE_MEM_REGION("CPU: streaming", reinterpret_cast<std::uint64_t>(Buffer.m_pData), Aligned); XPROFILE_MEM_ALLOC("CPU: streaming", reinterpret_cast<std::uint64_t>(Buffer.m_pData), 0, Aligned, "Streaming: read buffer"); }
             if (!Buffer.m_pData) { CloseHandle(h); return xerr::create_f<state, "ReadWholeFile: out of memory">(); }
         }
 
@@ -101,9 +112,11 @@ namespace xfile
         std::fseek(f, 0, SEEK_END); const std::size_t Size = static_cast<std::size_t>(std::ftell(f)); std::fseek(f, 0, SEEK_SET);
         if (Buffer.m_Capacity < Size)
         {
+            if (Buffer.m_pData) XPROFILE_MEM_REGION("CPU: streaming", reinterpret_cast<std::uint64_t>(Buffer.m_pData), 0);
             std::free(Buffer.m_pData);
             Buffer.m_pData    = static_cast<std::byte*>(std::malloc(Size));
             Buffer.m_Capacity = Buffer.m_pData ? Size : 0;
+            if (Buffer.m_pData) { XPROFILE_MEM_REGION("CPU: streaming", reinterpret_cast<std::uint64_t>(Buffer.m_pData), Size); XPROFILE_MEM_ALLOC("CPU: streaming", reinterpret_cast<std::uint64_t>(Buffer.m_pData), 0, Size, "Streaming: read buffer"); }
         }
         const bool bOk = Buffer.m_pData && std::fread(Buffer.m_pData, 1, Size, f) == Size;
         std::fclose(f);
