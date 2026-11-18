@@ -2,6 +2,7 @@
 #define XFILE_H
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <span>
 #include <string>

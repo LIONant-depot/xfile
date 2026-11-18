@@ -269,36 +269,21 @@ namespace xfile
         if( auto Err = SeekOrigin( 0 ); Err ) 
             return Err;
 
-        std::size_t                       i;
         std::array<std::byte, 2 * 256>    Buffer;
         std::size_t                       Length;
-        
+
         if( auto Err = getFileLength(Length); Err ) 
             return Err;
 
-        if (Length > Buffer.size() )
+        // Copy in buffer-sized pieces (the old loop read 512 bytes but counted 256, and the tail used an index never set for a short file)
+        for( std::size_t Done = 0; Done < Length; )
         {
-            Length -= Buffer.size();
-            for (i = 0; i < Length; i += 256 )
-            {
-                if( auto Err = ReadRaw(Buffer); Err ) 
-                    return Err;
-
-                if( auto Err = File.WriteRaw(Buffer) ) 
-                    return Err;
-            }
-            Length += Buffer.size();
-        }
-
-        // Write trailing bytes
-        auto S = Length - i;
-        if (S)
-        {
-            auto FinalView = std::span{ Buffer.data(), Length - i };
-            if( auto Err = ReadRaw(FinalView); Err) 
+            const auto View = std::span{ Buffer.data(), std::min(Buffer.size(), Length - Done) };
+            if( auto Err = ReadRaw(View); Err ) 
                 return Err;
-
-            return File.WriteRaw(FinalView);
+            if( auto Err = File.WriteRaw(View); Err ) 
+                return Err;
+            Done += View.size();
         }
 
         return {};
